@@ -18,7 +18,7 @@
 
 int main(int argc, char* argv[]){
 	
-	if(argc!=3){
+	if(argc!=4){
 		printf("Utilizacao: %s <n. pedidos> <max. utilizacao> <un. tempo>\n",argv[0], )
 		exit(0);
 	}
@@ -27,10 +27,12 @@ int main(int argc, char* argv[]){
 	int max_util= atoi(argv[2]);
 	char un_tempo = argv[3];//s,m, u - unidade de tempo
 	int fd_entrada;
+	int fd_rejeitados;
+	
 		
-	//open fifo
+	//Abrir fifos
 	fd_entrada=open("/tmp/entrada",O_RDWR);
-	fd_entrada=open("/tmp/rejeitados",O_RDWR);
+	fd_rejeitados=open("/tmp/rejeitados",O_RDWR);
 	
 	//gerar os pedidos aleatoriosS
 	

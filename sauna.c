@@ -15,3 +15,31 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+
+
+int main(int argc, char* argv[]){
+	
+	if(argc!=3){
+		printf("Utilizacao: %s <n. lugares> <un. tempo>\n",argv[0], )
+		exit(0);
+	}
+	
+	int n_lugares= atoi(argv[1]);
+	char un_tempo = argv[2];//s,m, u - unidade de tempo
+
+	int fd_entrada;
+	int fd_rejeitados;
+	
+	//criar fifos
+	mkfifo("/tmp/entrada", 0660);
+	mkfifo("/tmp/rejeitados", 0660);
+	
+	//Abrir fifos
+	fd_entrada=open("/tmp/entrada",O_RDWR);
+	fd_rejeitados=open("/tmp/rejeitados",O_RDWR);
+	
+	//gerar os pedidos aleatoriosS
+	
+	
+	return 0;	
+}
