@@ -32,7 +32,7 @@ int vec_size, n_pessoas;
 struct Request* requests;
 
 void *request_func(void * arg){
-	if (n_pessoas == 5)
+//	if (n_pessoas == 5)
 		//wait for a spot
 	int aux = *(int *) arg;
 	usleep(requests[aux].t * 1000);	
@@ -49,17 +49,21 @@ void *request_func(void * arg){
 int main(int argc, char* argv[]){
 	
 	if(argc!=3){
-		printf("Utilizacao: %s <n. lugares> <un. tempo>\n",argv[0])
+		printf("Utilizacao: %s <n. lugares> <un. tempo>\n",argv[0]);
 		exit(0);
 	}
 	
+	
+	int size;
+	struct Request r;
+	pthread_t tid;
+	
 	int n_lugares= atoi(argv[1]);
-	requests = malloc(n_lugares *sizeof(Request));
+	requests = malloc(n_lugares *sizeof(r));
 	int aux = 0;
 	int n_pessoas = 0;
 	vec_size = n_lugares;
-	char un_tempo = argv[2];//s,m, u - unidade de tempo
-
+	//char un_tempo = *(char*) argv[2];//s,m, u - unidade de tempo
 	int fd_entrada, fd_rejeitados;
 	
 	//criar fifos
@@ -73,24 +77,20 @@ int main(int argc, char* argv[]){
 	}
 	
 	//Abrir fifos
-	if (fd_entrada=open("/tmp/entrada",O_RDWR) == -1)
+	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1)
 	{
 		perror("Erro na abertura do fifo de entrada\n");
 		exit(3);
 	}
-	if (fd_rejeitados=open("/tmp/rejeitados",O_RDWR) == -1){
+	if ((fd_rejeitados=open("/tmp/rejeitados",O_RDWR)) == -1){
 		perror("Erro na abertura do fifo de rejeitados\n");
 		exit(4);
-	}
+	}		
 	
-	int size;
-	Request r;
-	pthread_t tid;		
-	
-	while(size = read(fd_entrada, r, sizeof(r)) > 0){
+	while( (size = read(fd_entrada, &r, sizeof(r))) > 0){
 		printf("id: %d\n", r.p);
 		//a sauna está vazia
-		if (requests.size() == 0){
+		if (n_pessoas == 0){
 			requests[aux] = r;
 			n_pessoas ++;
 			aux++;
@@ -104,12 +104,9 @@ int main(int argc, char* argv[]){
 				}
 			//rejeita pedido
 			else
-				write(fd_rejeitados, r, sizeof(r));
+				write(fd_rejeitados, &r, sizeof(r));
 		}		
 		
 	}
 	return 0;
 }
-
-
-
