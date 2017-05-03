@@ -77,18 +77,18 @@ int main(int argc, char* argv[]){
 	}
 	
 	//Abrir fifos
-	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1)
+	if ((fd_entrada=open("/tmp/entrada",0660)) == -1)
 	{
-		perror("Erro na abertura do fifo de entrada\n");
+		perror("Erro na abertura do fifo de entrada");
 		exit(3);
 	}
-	if ((fd_rejeitados=open("/tmp/rejeitados",O_RDWR)) == -1){
-		perror("Erro na abertura do fifo de rejeitados\n");
+	if ((fd_rejeitados=open("/tmp/rejeitados",0660)) == -1){
+		perror("Erro na abertura do fifo de rejeitados");
 		exit(4);
 	}		
 	
 	while( (size = read(fd_entrada, &r, sizeof(r))) > 0){
-		printf("id: %d\n", r.p);
+		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t,r.tip);
 		//a sauna está vazia
 		if (n_pessoas == 0){
 			requests[aux] = r;
@@ -108,5 +108,12 @@ int main(int argc, char* argv[]){
 		}		
 		
 	}
+	pthread_join(tid,NULL);
+	//Close and delete fifos
+	close(fd_entrada);
+	close(fd_rejeitados);
+	unlink("/tmp/entrada");
+	unlink("/tmp/rejeitados");
+	
 	return 0;
 }
