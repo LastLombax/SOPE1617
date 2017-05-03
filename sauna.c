@@ -77,16 +77,16 @@ int main(int argc, char* argv[]){
 	}
 	
 	//Abrir fifos
-	if ((fd_entrada=open("/tmp/entrada",0660)) == -1)
+	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1)
 	{
 		perror("Erro na abertura do fifo de entrada");
 		exit(3);
 	}
-	if ((fd_rejeitados=open("/tmp/rejeitados",0660)) == -1){
+	if ((fd_rejeitados=open("/tmp/rejeitados",O_RDWR)) == -1){
 		perror("Erro na abertura do fifo de rejeitados");
 		exit(4);
 	}		
-	
+	puts("Waiting for Generator Data . . .");
 	while( (size = read(fd_entrada, &r, sizeof(r))) > 0){
 		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t,r.tip);
 		//a sauna está vazia
