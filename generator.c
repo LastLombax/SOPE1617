@@ -48,7 +48,7 @@ void * generator_func(void * arg)
 	int tim;
 	int militime;
 	float instant;
-	long ticks sysconf(_SC_CLK_TCK);
+	long ticks =sysconf(_SC_CLK_TCK);
 	struct Request request;
 	
 	
@@ -81,15 +81,14 @@ void * generator_func(void * arg)
 
 void * rejected_func(void * arg)
 {
-	int n_rejeicoes=0;
 	int size;
 	struct Request r;
 	
-	while(size = read(fd_entrada, &r, sizeof(r))) > 0){
+	while((size = read(fd_rejeitados, &r, sizeof(r))) > 0){
 		printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip);
 		if(r.rej<3){
 			r.rej++;
-			write(fd_entrada, &request, sizeof(request));
+			write(fd_entrada, &r, sizeof(r));
 		}
 	}
 	
