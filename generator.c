@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #define PEDIDO 0
 #define REJEITADO 1
@@ -36,6 +37,8 @@ struct Request {
 	int tip; // estado do pedido
 	int rej; //numero de rejeicoes
 };
+
+
 
 void * generator_func(void * arg)
 {
@@ -75,15 +78,22 @@ void * generator_func(void * arg)
 		write(filedes, bf,LINE);
 		n--;
 	}
+	close(fd_entrada);
 	
+
 	return NULL;
 }
-
+/*
 void * rejected_func(void * arg)
 {
 	int size;
 	struct Request r;
-	
+
+	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
+		perror("Erro na abertura do fifo de entrada\n");
+		exit(1);		
+	}
+
 	while((size = read(fd_rejeitados, &r, sizeof(r))) > 0){
 		printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip);
 		if(r.rej<3){
@@ -93,7 +103,7 @@ void * rejected_func(void * arg)
 	}
 	
 	return NULL;
-}
+}*/
 
 int main(int argc, char* argv[]){
 	start = times(&t);
@@ -117,24 +127,26 @@ int main(int argc, char* argv[]){
 		perror("Erro na abertura do fifo de rejeitados\n");
 		exit(2);	
 	}
-	
+
+	write(fd_entrada, &n_pedidos, sizeof(int));	
+
 	//Thread1 - Gerador de pedidos 
 	pthread_t pid1;
 	if(pthread_create(&pid1,NULL, generator_func,&n_pedidos)<0) perror("Erro a Criar o Thread Gerador");
-
+/*
 	//Thread2 - Pedidos Rejetados
 	pthread_t pid2;
 	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Erro a Criar o Thread dos Rejeitados");
-	
+	*/
 	
 	//Join de ThreadsS
 	if(pthread_join(pid1,NULL)<0) perror("Erro no join do thread Gerador");
-	if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
+	//if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
 	
 	//Close and delete fifos
-	close(fd_entrada);
-	close(fd_rejeitados);
-	unlink("/tmp/rejeitados");
+	
+	//close(fd_rejeitados);
+	//unlink("/tmp/rejeitados");
 	unlink("/tmp/entrada");
 	return 0;	
 }

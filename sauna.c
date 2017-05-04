@@ -32,10 +32,9 @@ struct Request {
 	int rej;//numero de rejeicoes
 };
 
+
 int vec_size; //tamanho do vetor 
 int n_pessoas=0; //numero de pessoas na sauna
-clock_t start,end;
-struct tms t;
 
 struct Request* requests;
 
@@ -61,7 +60,7 @@ void *request_func(void * arg){
 	return NULL;		
 }
 	
-void mensag(struct Request r, pthread_t tid){
+/*void mensag(struct Request r, pthread_t tid){
 	//guardar mensagens em bal.pid
 	int filedes = open("/tmp/bal.pid", O_WRONLY,O_SYNC);
 	
@@ -91,7 +90,7 @@ void mensag(struct Request r, pthread_t tid){
 	return NULL;
 
 }
-
+*/
 int main(int argc, char* argv[]){
 	
 	//start = times(&t); //starts counting
@@ -102,6 +101,7 @@ int main(int argc, char* argv[]){
 	}
 	
 	int fd_entrada, fd_rejeitados;		
+
 	//criar fifos
 	if (mkfifo("/tmp/entrada", 0660) == -1){
 		perror("Erro na criação do fifo de entrada\n");
@@ -122,56 +122,82 @@ int main(int argc, char* argv[]){
 		perror("Erro na abertura do fifo de rejeitados");
 		exit(4);
 	}
+
 	
-	struct Request r;		
+			
 	int n_lugares= atoi(argv[1]);	
-	int last_pos = n_lugares-1;
-	int size, i, index=0, valid;
-	
-	semArray = malloc(n_lugares*sizeof(r));
-	requests = malloc(n_lugares*sizeof(r));	
+//	int index=0, valid
+	int size, l = 0, i;
+	struct Request r;
+
+	semArray = malloc(n_lugares*sizeof(*semArray));
+
 	vec_size = n_lugares;	
 	for (i = 0; i < vec_size; i++)
-		sem_init(&semArray[i], 0, 1);
+	     sem_init(&semArray[i], 0, 1);
 		
-	
+	/*pthread_t tid;
+	tid=pthread_self();*/	
 
-	pthread_t tid;
-	tid=pthread_self();	
-	
-	puts("Waiting for Generator Data . . .");
-	
-	while( (size = read(fd_entrada, &r, sizeof(r))) > 0){
-		r.tip = RECEBIDO;		
-		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t,r.tip);
-		printf("pem: %d\n", n_pessoas);
-		
-		if (index == last_pos)
-			index = 0;
-		
-		//a sauna está vazia
-		if (n_pessoas == 0){			
-			index = 0;
-			sem_wait(&semArray[index]);
-			requests[index] = r;
-			pthread_create(&tid, NULL, request_func, &index);
+	//gets number of requests before getting the requests
+	int n_pedidos;
+	read(fd_entrada, &n_pedidos, sizeof(int));
+	requests = malloc(n_pedidos*sizeof(*requests));	
+
+	puts("Waiting for Generator Data . . .\n");
+	while( (size = read(fd_entrada, &r, sizeof(r))) > 0 || l != n_pedidos-1 ){		
+		r.tip = RECEBIDO;
+		requests[l] = r;		
+		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t, r.tip);
+		l++;
+		if (l == n_pedidos){
+		close(fd_entrada);
+		break;
 		}
-		sem_getValue(sem_wait(&semArray[index]),&valid);
-		//existe alguém na sauna		
-		else if (n_pessoas > 0 && n_pessoas < vec_size && requests[0].g == r.g && valid == 1){
-			index++;
-			sem_wait(&semArray[index]);
-			requests[index] = r;
-			pthread_create(&tid, NULL, request_func, &index);
-		}			
-		else {
-			r.tip = REJEITADO;			
-			write(fd_rejeitados, &r, sizeof(r));			
-		}		
+
+
+	}
+	//requests is now the full queue
+	printf("deal with queue\n");
+	
+	/*while( (size = read(fd_entrada, &r, sizeof(r))) > 0){
+		
+		printf("pem: %d\n", n_pessoas);
+		if(n_pessoas == n_lugares)
+		for (index = 0; index < vec_size; index++)
+		{		
+			sem_getValue(sem_wait(&semArray[index]),&valid);
+			//a sauna está vazia
+			if (n_pessoas == 0){			
+				index = 0;
+				sem_wait(&semArray[index]);
+				requests[index] = r;
+				pthread_create(&tid, NULL, request_func, &index);
+				break;
+			}
+	
+			//existe alguém na sauna		
+			else if (requests[0].g == r.g && valid == 1){
+				index++;
+				sem_wait(&semArray[index]);
+				requests[index] = r;
+				pthread_create(&tid, NULL, request_func, &index);
+				break;
+			}
+			else if (requests[0].g != r.g){
+				r.tip = REJEITADO;			
+				write(fd_rejeitados, &r, sizeof(r));
+				break;
+			}					
+			else  {
+				r.tip = REJEITADO;			
+				write(fd_rejeitados, &r, sizeof(r));			
+			}	
+		}	
 	
 					
 	}
-	pthread_join(tid,NULL);
+	pthread_join(tid,NULL);*/
 	
 	//Close and delete fifos
 	close(fd_entrada);
