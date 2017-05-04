@@ -97,25 +97,24 @@ void * rejected_func(void * arg)
 
 int main(int argc, char* argv[]){
 	start = times(&t);
-	if(argc!=4){
-		printf("Utilizacao: %s <n. pedidos> <max. utilizacao> <un. tempo>\n",argv[0]);
+	if(argc!=3){
+		printf("Utilizacao: %s <n. pedidos> <max. utilizacao>\n",argv[0]);
 		exit(0);
 	}
 	
 	int n_pedidos= atoi(argv[1]);
 	int max_util= atoi(argv[2]);//mins
 	max_utilizacao=max_util;
-	//char un_tempo = *(char*)argv[3];//s,m, u - unidade de tempo/milisegundos	
 	
 	
 	//Abrir fifos
 	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
-		perror("Erro na abretura fifo entrada\n");
+		perror("Erro na abertura do fifo de entrada\n");
 		exit(1);		
 	}
 	
 	if((fd_rejeitados=open("/tmp/rejeitados",O_RDWR))==-1){
-		perror("Erro na abretura fifo rejeitados\n");
+		perror("Erro na abertura do fifo de rejeitados\n");
 		exit(2);	
 	}
 	
