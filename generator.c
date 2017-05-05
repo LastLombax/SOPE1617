@@ -38,8 +38,6 @@ struct Request {
 	int rej; //numero de rejeicoes
 };
 
-
-
 void * generator_func(void * arg)
 {
 	int n = *(int*) arg; 
@@ -52,8 +50,7 @@ void * generator_func(void * arg)
 	int militime;
 	float instant;
 	long ticks =sysconf(_SC_CLK_TCK);
-	struct Request request;
-	
+	struct Request request;	
 	
 	char bf[LINE];
 	char *tip_str="PEDIDO";
