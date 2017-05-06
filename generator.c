@@ -59,7 +59,7 @@ void * generator_func(void * arg)
 		
 		gen = rand()%2;
 		tim = rand()%max_utilizacao + 5  ;
-		militime= tim*60*1000;
+		militime= tim;
 		
 		request.p = pinc++;
 		if(gen==0) request.g = 'F';
