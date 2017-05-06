@@ -47,7 +47,7 @@ sem_t* semArray;
 void *request_func(void * arg){	
 	struct aux reInd = *(struct aux *) arg;			
 	printf("here\n");
-	usleep(reInd.r.t * 0.5); //time in sauna
+	sleep(reInd.r.t * 0.5); //time in sauna
 	
 	reInd.r.tip = SERVIDO;	
 	printf("There is a clear spot in the sauna\n");
@@ -168,7 +168,8 @@ int main(int argc, char* argv[]){
 		exit(3);
 	}
 	
-	printf("Dealing with queue\n");
+	printf("\nDealing with queue\n\n");
+	sleep(5);
 
 	int hasRejected = 0,index;
 	char gender;
@@ -214,19 +215,30 @@ int main(int argc, char* argv[]){
 			
 			//se a sauna estiver vazia
 			if (n_pessoas == 0){	
-					printf("no one\n");
+					printf("sauna is empty\n");
 					n_pessoas++;
 					struct aux reInd;
 					reInd.r = requests[0];
 					reInd.ind = index;
 					gender = requests[0].g;					
 					sem_wait(&semArray[index]);
-					pthread_create(&threads[index], NULL, request_func, &reInd);		
-					//shifts the requests
+					pthread_create(&threads[index], NULL, request_func, &reInd);
+				//copiar o primeiro elemento para uma variavel temporária 
+				//e enviar para os rejeitados
+				
+				
+				
+				//shifts the requests
 					for (i = 0; i < n_pedidos; i++)
 						*(requests+i) = *(requests+i+1);
+				//o primeiro elemento é apagado
 					for (i = 0; i < n_pedidos; i++)					
-						printf("id: %d\n", requests[i].p);		
+						printf("id: %d\n", requests[i].p);	
+				//(o ultimo elemento adicionado é lixo de memoria)
+				
+				//Apagar o ultimo membro
+				
+				
 			}		
 			//existe alguém na sauna		
 			else if (requests[0].g == gender && valid == 1){

@@ -80,7 +80,7 @@ void * generator_func(void * arg)
 
 	return NULL;
 }
-/*
+
 void * rejected_func(void * arg)
 {
 	int size;
@@ -100,7 +100,7 @@ void * rejected_func(void * arg)
 	}
 	
 	return NULL;
-}*/
+}
 
 int main(int argc, char* argv[]){
 	start = times(&t);
@@ -130,20 +130,17 @@ int main(int argc, char* argv[]){
 	//Thread1 - Gerador de pedidos 
 	pthread_t pid1;
 	if(pthread_create(&pid1,NULL, generator_func,&n_pedidos)<0) perror("Erro a Criar o Thread Gerador");
-/*
+	if(pthread_join(pid1,NULL)<0) perror("Erro no join do thread Gerador");
+	
 	//Thread2 - Pedidos Rejetados
 	pthread_t pid2;
 	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Erro a Criar o Thread dos Rejeitados");
-	*/
-	
-	//Join de ThreadsS
-	if(pthread_join(pid1,NULL)<0) perror("Erro no join do thread Gerador");
-	//if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
+	if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
 	
 	//Close and delete fifos
 	
-	//close(fd_rejeitados);
-	//unlink("/tmp/rejeitados");
+	close(fd_rejeitados);
+	unlink("/tmp/rejeitados");
 	unlink("/tmp/entrada");
 	return 0;	
 }
