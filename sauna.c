@@ -42,12 +42,10 @@ int n_lugares; //tamanho do vetor de semáforos
 int n_pessoas=0; //numero de pessoas na sauna
 struct Request* requests; //fila de pedidos
 sem_t* semArray;//array com semáforos para cada lugar
-
-int n_pedidos;
+int n_pedidos; //número de pedidos enviado pelo generator
 
 void *request_func(void * arg){	
 	struct aux reInd = *(struct aux *) arg;			
-	printf("entrou na thread %d\n", reInd.ind);
 	sleep(reInd.r.t); //time in sauna
 	
 	reInd.r.tip = SERVIDO;	
@@ -171,64 +169,70 @@ int main(int argc, char* argv[]){
 	printf("\nDealing with queue\n\n");
 	sleep(2);
 
-	int hasRejected = 0,index, currSize = n_pedidos;
-	char gender;	
+	int hasRejected = 0,index, currSize = n_pedidos, flag = 0;
+	char gender;		
 	
-	
-	//problema quando a fila vai ficar vazia e ele entra no hasRejected
-	
-	
-	while (currSize > 0){
-		printf("currSizeini: %d\n", currSize);
-		if (requests[0].p == 0){
-			printf("yiss\n");
-			hasRejected = 0;
+	while (1){
+		for (i = 0; i < currSize; i++)					
+			printf("id: %d\n", requests[i].p);		
+		
+		for(i = 0; i < currSize; i++)
+            if(requests[i].rej == 3)
+               	flag++;   		
+
+		//the loop breaks here
+		if(flag == currSize) {
+			printf("All the remaining requests will be rejected\n");
+			r.p = -1;
+			write(fd_rejeitados, &r, sizeof(r)); //write to fifo rejeitados
+			break;
 		}
-		//verifica se pode acrescentar um pedido que foi rejeitado
-		//se foi rejeitado, hasRejected = 1
-		if (hasRejected)
-		{ 
-			printf("r: %d\n", hasRejected);
+	
+		flag = 0;
+	
+		//if someone was rejected, it will read from the fifo and insert the rejected request in the queue
+		if (hasRejected) { 
 			size = read(fd_entrada, &r, sizeof(r));
 			hasRejected = 0;
 			if(size < 0)
 			{
-				perror("Erro na abertura do fifo de entrada");
+				perror("Erro na abertura do fifo de entrada\n");
 				exit(3);
 			}
 			else if (size == 0)
 				continue;
 			else{
 				//procura o primeiro local após o ultimo membro
+				printf("Inserting rejected on the end of the queue\n");
 				requests[currSize] = r;
 				currSize++;
 				}
 		}
-		for (index = 0; index < n_lugares; index++)
-		{ 			
+		
+		for (index = 0; index < n_lugares; index++)	{ 		
+			
+			//reject request
 			if (n_pessoas > 0 && requests[0].g != gender){
-				printf("rejected \n");
+				printf("Request rejected \n");
 				requests[0].tip = REJEITADO;	
 				hasRejected=1;
 				currSize--;
 				write(fd_rejeitados, &requests[0], sizeof(requests[0])); //write to fifo rejeitados
+				//adjusts the queue
 				for (i = 0; i < n_pedidos; i++)
 					*(requests+i) = *(requests+i+1);
 				requests[n_pedidos-1].p = 0;
-				for (i = 0; i < n_pedidos; i++)					
-					printf("id: %d\n", requests[i].p);	
 				break;
 			}						
 			
-			printf("n_pessoas: %d\n",n_pessoas);
-			//se a sauna estiver cheia
-			while(n_pessoas == n_lugares) {sleep(1); printf("parado\n");} //pára enquanto estiver cheio
+			//stops execution while sauna is full
+			while(n_pessoas == n_lugares) {sleep(1); printf("parado\n");} 
 		
 			sem_getvalue(&semArray[index],&valid);
 			
-			//se a sauna estiver vazia
+			//if sauna is empty
 			if (n_pessoas == 0){	
-					printf("sauna is empty\n");
+					printf("Empty sauna: you can come in\n");
 					struct aux reInd;
 					reInd.r = requests[0];
 					reInd.ind = index;
@@ -237,17 +241,16 @@ int main(int argc, char* argv[]){
 					currSize--;				
 					sem_wait(&semArray[index]);
 					pthread_create(&threads[index], NULL, request_func, &reInd);
-				//shifts the requests
+					//adjusts the queue
 					for (i = 0; i < n_pedidos; i++)
 						*(requests+i) = *(requests+i+1);
 					requests[n_pedidos-1].p = 0;
-					for (i = 0; i < n_pedidos; i++)					
-						printf("id: %d\n", requests[i].p);
 				break;
 			}		
-			//existe alguém na sauna		
+			
+			//there's someone in the sauna	
 			else if (requests[0].g == gender && valid == 1){
-					printf("someone in \n");
+					printf("You can enter\n");
 					struct aux reInd;
 					reInd.r = requests[0];
 					reInd.ind = index;
@@ -255,27 +258,26 @@ int main(int argc, char* argv[]){
 					currSize--;	
 					sem_wait(&semArray[index]);
 					pthread_create(&threads[index], NULL, request_func, &reInd);	
-					//shifts the requests
+					//adjusts the queue
 					for (i = 0; i < n_pedidos; i++)
 						*(requests+i) = *(requests+i+1);
-					requests[n_pedidos-1].p = 0;
-					for (i = 0; i < n_pedidos; i++)					
-						printf("id: %d\n", requests[i].p);		
+					requests[n_pedidos-1].p = 0;					
 				break;
 			}			
 		}
-		printf("currSizefim: %d\n", currSize);
+	}
+	printf("Checking if there's anyone in the sauna...\n");
+	
+	int v, value;
+	
+	//waits for possible threads	
+	for (v = 0; v < n_lugares;v++) {
+		sem_getvalue(&semArray[v],&value); //current value of the semaphore v in value
+		if (value == 0) //thread in execution		
+			pthread_join(threads[v],NULL);		
 	}
 	
-	//espera por possíveis threads
-	int v;
-	for (v = 0; v < n_lugares;v++)
-	{
-		sem_getvalue(&semArray[v],&v); //guarda valor atual em v
-		if (v == 0) //thread em execução
-			pthread_join(threads[v],NULL);
-	}
-	puts("finished\n");
+	puts("All requests were served. Thank you and come again!\n");
 	//Close and delete fifos
 	close(fd_entrada);
 	close(fd_rejeitados);

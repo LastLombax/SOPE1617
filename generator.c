@@ -85,18 +85,21 @@ void * rejected_func(void * arg)
 {
 	int size;
 	struct Request r;
-
 	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
 		perror("Erro na abertura do fifo de entrada\n");
 		exit(1);		
 	}
 
 	while((size = read(fd_rejeitados, &r, sizeof(r))) > 0){
+		if (r.p == -1){//about to end
+			printf("No more rejected requests\n");
+			return NULL;
+		} 
 		printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip);
 		if(r.rej<3){
 			r.rej++;
 			write(fd_entrada, &r, sizeof(r));
-		}
+		}		
 	}
 	
 	return NULL;
@@ -138,7 +141,6 @@ int main(int argc, char* argv[]){
 	if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
 	
 	//Close and delete fifos
-	
 	close(fd_rejeitados);
 	unlink("/tmp/rejeitados");
 	unlink("/tmp/entrada");
