@@ -43,12 +43,26 @@ int n_pessoas=0; //numero de pessoas na sauna
 struct Request* requests; //fila de pedidos
 sem_t* semArray;//array com semáforos para cada lugar
 int n_pedidos; //número de pedidos enviado pelo generator
+clock_t start,end;
+struct tms t;
 
 void *request_func(void * arg){	
 	struct aux reInd = *(struct aux *) arg;			
 	sleep(reInd.r.t); //time in sauna
 	
-	reInd.r.tip = SERVIDO;	
+	reInd.r.tip = SERVIDO;
+	
+	int filedes = open("/tmp/bal.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
+	float instant;
+	long ticks =sysconf(_SC_CLK_TCK);
+	
+	char bf[LINE];
+	char *tip_str="SERVIDO";
+	end=times(&t);
+	instant=(float)(end-start)/ticks;
+	sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), reInd.r.p, reInd.r.g, reInd.r.t, tip_str);
+	write(filedes, bf,LINE);
+	
 	printf("There is a clear spot in the sauna\n");
 	n_pessoas--;
 	
@@ -92,7 +106,12 @@ void *request_func(void * arg){
 */
 int main(int argc, char* argv[]){
 	
-	//start = times(&t); //starts counting
+	int filedes = open("/tmp/bal.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
+	float instant;
+	long ticks =sysconf(_SC_CLK_TCK);
+	
+	
+	start = times(&t); //starts counting
 	
 	if(argc!=2){
 		printf("Utilizacao: %s <n. lugares>\n",argv[0]);
@@ -153,6 +172,14 @@ int main(int argc, char* argv[]){
 		r.tip = RECEBIDO;
 		requests[l] = r;
 		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t, r.tip);
+		
+		char bf[LINE];
+		char *tip_str="PEDIDO";
+		end=times(&t);
+		instant=(float)(end-start)/ticks;
+		sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), r.p, r.g, r.t, tip_str);
+		write(filedes, bf,LINE);
+		
 		l++;
 		if (l == aux){
 		   close(fd_entrada);
@@ -218,6 +245,14 @@ int main(int argc, char* argv[]){
 				hasRejected=1;
 				currSize--;
 				write(fd_rejeitados, &requests[0], sizeof(requests[0])); //write to fifo rejeitados
+				
+				char bf[LINE];
+				char *tip_str="REJEITADO";
+				end=times(&t);
+				instant=(float)(end-start)/ticks;
+				sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), requests[0].p, requests[0].g, requests[0].t, tip_str);
+				write(filedes, bf,LINE);
+				
 				//adjusts the queue
 				for (i = 0; i < n_pedidos; i++)
 					*(requests+i) = *(requests+i+1);

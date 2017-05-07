@@ -85,6 +85,13 @@ void * rejected_func(void * arg)
 {
 	int size;
 	struct Request r;
+	
+	
+	int filedes = open("/tmp/ger.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);  //José
+	char bf[LINE]; // José
+	float instant; // José
+	long ticks =sysconf(_SC_CLK_TCK); // José
+	
 	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
 		perror("Erro na abertura do fifo de entrada\n");
 		exit(1);		
@@ -95,11 +102,28 @@ void * rejected_func(void * arg)
 			printf("No more rejected requests\n");
 			return NULL;
 		} 
-		printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip);
+		
 		if(r.rej<3){
+			
+			end=times(&t); //José
+			instant=(float)(end-start)/ticks; //José
+			char *tip_str="REJEITADO"; //José
+			printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); //José
+			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
+			write(filedes, bf,LINE); //José
+			
 			r.rej++;
 			write(fd_entrada, &r, sizeof(r));
-		}		
+		}
+		else{ //José
+			end=times(&t); //José
+			instant=(float)(end-start)/ticks; //José
+			char *tip_str="DESCARTADO"; //José
+			r.tip = DESCARTADO; //José
+			printf("Descartado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); //José
+			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
+			write(filedes, bf,LINE); //José
+		} //José
 	}
 	
 	return NULL;
