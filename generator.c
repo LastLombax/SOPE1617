@@ -31,18 +31,28 @@ clock_t start,end;
 struct tms t;
 
 struct Request {
-	int p;// numero de série do pedido
-	char g;// género do utilizador ('F' ou 'M')
-	int t;// duracao da utilizacao pedida
-	int tip; // estado do pedido
-	int rej; //numero de rejeicoes
+	int p; //id number 
+	char g; //user gender('F' or 'M')
+	int t; //duration in sauna 
+	int tip; //request state
+	int rej;//number of rejections
 };
+
+
+//inst e pid têm valores estranhos nos dois ficheiros
+//o pid no nome dos files é o identificador do processo que os cria, tem de ser metido
+//falta escrever a ultima informação estatística no fim:
+//nº pedidos gerados (total e por género), 
+//nº de rejeiçõesrecebidas (total e por género) e
+//nº de rejeições descartadas (total e por género).
+//escrever as mensagens de cada pedido criado no generator.c no file ger.pid
+
 
 void * generator_func(void * arg)
 {
 	int n = *(int*) arg; 
 	int filedes = open("/tmp/ger.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
-	int pinc=1;//incrementados de pedidos
+	int pinc=1;//request increment
 	
 	srand(time(NULL));
 	int gen;
@@ -92,9 +102,9 @@ void * rejected_func(void * arg)
 	float instant; // José
 	long ticks =sysconf(_SC_CLK_TCK); // José
 	
-	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
-		perror("Erro na abertura do fifo de entrada\n");
-		exit(1);		
+	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
+		perror("Error on opening the fifo entrada");
+		exit(3);
 	}
 
 	while((size = read(fd_rejeitados, &r, sizeof(r))) > 0){
@@ -132,7 +142,7 @@ void * rejected_func(void * arg)
 int main(int argc, char* argv[]){
 	start = times(&t);
 	if(argc!=3){
-		printf("Utilizacao: %s <n. pedidos> <max. utilizacao>\n",argv[0]);
+		printf("Usage: %s <n. pedidos> <max. utilizacao>\n",argv[0]);
 		exit(0);
 	}
 	
@@ -141,28 +151,27 @@ int main(int argc, char* argv[]){
 	max_utilizacao=max_util;
 	
 	
-	//Abrir fifos
-	if((fd_entrada=open("/tmp/entrada",O_RDWR))==-1){
-		perror("Erro na abertura do fifo de entrada\n");
-		exit(1);		
+	//open fifos
+	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
+		perror("Error on opening the fifo entrada");
+		exit(3);
 	}
-	
-	if((fd_rejeitados=open("/tmp/rejeitados",O_RDWR))==-1){
-		perror("Erro na abertura do fifo de rejeitados\n");
-		exit(2);	
-	}
+	if ((fd_rejeitados=open("/tmp/rejeitados",O_RDWR)) == -1){
+		perror("Error on opening the fifo rejeitados");
+		exit(4);
+	}	
 
 	write(fd_entrada, &n_pedidos, sizeof(int));	
 
-	//Thread1 - Gerador de pedidos 
+	//Thread1 - Request Generator 
 	pthread_t pid1;
-	if(pthread_create(&pid1,NULL, generator_func,&n_pedidos)<0) perror("Erro a Criar o Thread Gerador");
-	if(pthread_join(pid1,NULL)<0) perror("Erro no join do thread Gerador");
+	if(pthread_create(&pid1,NULL, generator_func,&n_pedidos)<0) perror("Error creating the Generator Thread");
+	if(pthread_join(pid1,NULL)<0) perror("Error on join of the Generator Thread");
 	
-	//Thread2 - Pedidos Rejetados
+	//Thread2 - Rejected Requests
 	pthread_t pid2;
-	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Erro a Criar o Thread dos Rejeitados");
-	if(pthread_join(pid2,NULL)<0) perror("Erro no join do thread dos Rejeitados");
+	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Error creating the Rejected Thread");
+	if(pthread_join(pid2,NULL)<0) perror("Error on join of the Rejected Thread");
 	
 	//Close and delete fifos
 	close(fd_rejeitados);

@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #define RECEBIDO 0
 #define REJEITADO 1
@@ -25,11 +26,11 @@
 
 
 struct Request {
-	int p; //número de série
-	char g; //género do utilizador('F' ou 'M')
-	int t; //duração da utilização pedida
-	int tip; //estado do pedido
-	int rej;//numero de rejeicoes
+	int p; //id number 
+	char g; //user gender('F' or 'M')
+	int t; //duration in sauna 
+	int tip; //request state
+	int rej;//number of rejections
 };
 
 struct aux{
@@ -38,13 +39,39 @@ struct aux{
 };
 
 
-int n_lugares; //tamanho do vetor de semáforos
-int n_pessoas=0; //numero de pessoas na sauna
-struct Request* requests; //fila de pedidos
-sem_t* semArray;//array com semáforos para cada lugar
-int n_pedidos; //número de pedidos enviado pelo generator
+
+//inst e pid têm valores estranhos nos dois ficheiros
+//o pid no nome dos files é o identificador do processo que os cria, tem de ser metido
+//falta escrever a ultima informação estatística no fim:
+//nº pedidos gerados (total e por género), 
+//nº de rejeiçõesrecebidas (total e por género) e
+//nº de rejeições descartadas (total e por género).
+//escrever as mensagens de cada pedido criado no generator.c no file ger.pid
+
+
+
+int n_lugares; //semaphore array size and number of places in the sauna
+int n_pessoas=0; //number of people in sauna
+struct Request* requests; //request queue
+sem_t* semArray;//semaphore array where each place of the sauna is controlled by a semaphore
+int n_pedidos; //number of requests sent by generator
+//to control instants for the register messages
 clock_t start,end;
 struct tms t;
+int fd_entrada, fd_rejeitados; //file descriptors
+
+
+void sighandler(int signalno){
+	if (signalno == SIGINT)
+	{
+		printf("Program ended abruptally, shutting down...\n");
+		close(fd_entrada);
+		close(fd_rejeitados);
+		unlink("/tmp/entrada");
+		unlink("/tmp/rejeitados");
+		exit(0);
+	}
+}
 
 void *request_func(void * arg){	
 	struct aux reInd = *(struct aux *) arg;			
@@ -66,77 +93,47 @@ void *request_func(void * arg){
 	printf("There is a clear spot in the sauna\n");
 	n_pessoas--;
 	
-	//pthread_t tid;
-	//tid=pthread_self();	
-	
 	sem_post(&semArray[reInd.ind]);
 	return NULL;		
 }
 	
-/*void mensag(struct Request r, pthread_t tid){
-	//guardar mensagens em bal.pid
-	int filedes = open("/tmp/bal.pid", O_WRONLY,O_SYNC);
-	
-	time_t rawtime;
-   	struct tm *info;
-	char inst[LINE];
-	char bf[LINE];
-	char tip_str[10];
-	int pid = (int) getpid();
-	
-	sprintf(inst,"%d - %d - %d", info->tm_hour, info->tm_min,info->tm_sec); //inst
-	
-	switch(r.tip){
-		case RECEBIDO:		
-			strcat(tip_str,"RECEBIDO");			
-			break;				
-		case REJEITADO:			
-			strcat(tip_str,"REJEITADO");
-			break;
-		case SERVIDO:
-			strcat(tip_str,"SERVIDO");
-			break;
-	}
-	
-	sprintf(bf,"%s - %d - %u - %d: %c - %d - %s\n",(char*)inst, pid, tid, r.p, r.g, r.t, r.tip);
-	
-	return NULL;
 
-}
-*/
 int main(int argc, char* argv[]){
+	//in case something goes wrong, press Ctrl-C to close fifos and end program
+	struct sigaction action;
+	action.sa_handler = sighandler;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+	sigaction(SIGINT,&action,NULL);	
 	
 	int filedes = open("/tmp/bal.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
 	float instant;
-	long ticks =sysconf(_SC_CLK_TCK);
-	
+	long ticks =sysconf(_SC_CLK_TCK);	
 	
 	start = times(&t); //starts counting
 	
 	if(argc!=2){
-		printf("Utilizacao: %s <n. lugares>\n",argv[0]);
+		printf("Usage: %s <n. lugares>\n",argv[0]);
 		exit(0);
 	}
 	
-	int fd_entrada, fd_rejeitados;		
-
-	//criar fifos
+	//create fifos
 	if (mkfifo("/tmp/entrada", 0660) == -1){
-		perror("Erro na criação do fifo de entrada\n");
+		perror("Error on creating the fifo entrada\n");
 		exit(3);
 	}
 	if (mkfifo("/tmp/rejeitados", 0660) == -1){
-		perror("Erro na criação do fifo de rejeitados\n");
+		perror("Error on creating the fifo rejeitados\n");
 		exit(4);
 	}
 	
-	//Abrir fifos
+	//open fifos
 	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
-		perror("Erro na abertura do fifo de entrada");
+		perror("Error on opening the fifo entrada");
 		exit(3);
 	}
 	if ((fd_rejeitados=open("/tmp/rejeitados",O_RDWR)) == -1){
-		perror("Erro na abertura do fifo de rejeitados");
+		perror("Error on opening the fifo rejeitados");
 		exit(4);
 	}	
 			
@@ -146,28 +143,26 @@ int main(int argc, char* argv[]){
 
 	semArray = malloc(n_lugares*sizeof(*semArray));
 
-	//initialização do array de semáforos
+	//array initialization
 	for (i = 0; i < n_lugares; i++)
 	     if(sem_init(&semArray[i], 0, 1) == -1){
-			 perror("Erro na initialização do array de semáforos\n");
+			 perror("Error on the initialization of the semaphore array\n");
 			 exit(5);
 		 }
-			
+	
 	
 	//one thread per spot
 	pthread_t threads[n_lugares];
-		
-	//pthread_t tid;
-	//tid=pthread_self();
-
-	//gets number of requests before getting the requests
 	
+	
+	//gets number of requests before getting the requests	
 	puts("Waiting for Generator Data . . .\n");
 	read(fd_entrada, &n_pedidos, sizeof(int));
 	requests = malloc(n_pedidos*sizeof(*requests));	
 	
-	int aux = n_pedidos;
+	
 	//saves requests into array
+	int aux = n_pedidos;
 	while( (size = read(fd_entrada, &r, sizeof(r))) > 0 || l != aux-1 ){		
 		r.tip = RECEBIDO;
 		requests[l] = r;
@@ -189,7 +184,7 @@ int main(int argc, char* argv[]){
 	
 	
 	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
-		perror("Erro na abertura do fifo de entrada");
+		perror("Error on opening the fifo entrada");
 		exit(3);
 	}
 	
@@ -223,13 +218,13 @@ int main(int argc, char* argv[]){
 			hasRejected = 0;
 			if(size < 0)
 			{
-				perror("Erro na abertura do fifo de entrada\n");
+				perror("Error on opening the fifo entrada");
 				exit(3);
 			}
 			else if (size == 0)
 				continue;
 			else{
-				//procura o primeiro local após o ultimo membro
+				//finds the element in the queue after the last member
 				printf("Inserting rejected on the end of the queue\n");
 				requests[currSize] = r;
 				currSize++;
@@ -238,7 +233,7 @@ int main(int argc, char* argv[]){
 		
 		for (index = 0; index < n_lugares; index++)	{ 		
 			
-			//reject request
+			//rejects request
 			if (n_pessoas > 0 && requests[0].g != gender){
 				printf("Request rejected \n");
 				requests[0].tip = REJEITADO;	
@@ -276,6 +271,7 @@ int main(int argc, char* argv[]){
 					currSize--;				
 					sem_wait(&semArray[index]);
 					pthread_create(&threads[index], NULL, request_func, &reInd);
+				
 					//adjusts the queue
 					for (i = 0; i < n_pedidos; i++)
 						*(requests+i) = *(requests+i+1);
@@ -293,6 +289,7 @@ int main(int argc, char* argv[]){
 					currSize--;	
 					sem_wait(&semArray[index]);
 					pthread_create(&threads[index], NULL, request_func, &reInd);	
+				
 					//adjusts the queue
 					for (i = 0; i < n_pedidos; i++)
 						*(requests+i) = *(requests+i+1);
@@ -301,7 +298,7 @@ int main(int argc, char* argv[]){
 			}			
 		}
 	}
-	printf("Checking if there's anyone in the sauna...\n");
+	printf("Checking if there's anyone left in the sauna...\n");
 	
 	int v, value;
 	
