@@ -24,6 +24,10 @@
 
 #define LINE 100
 
+int nRecebidos[2] = {0 , 0};
+int nRejeitados[2] = {0 , 0};
+int nServidos[2] = {0 , 0};
+
 
 struct Request {
 	int p; //id number 
@@ -89,6 +93,11 @@ void *request_func(void * arg){
 	instant=(float)(end-start)/ticks;
 	sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), reInd.r.p, reInd.r.g, reInd.r.t, tip_str);
 	write(filedes, bf,LINE);
+	
+	if (reInd.r.g == 'M')
+		nServidos[0] += 1;
+	else
+		nServidos[1] += 1;
 	
 	printf("There is a clear spot in the sauna\n");
 	n_pessoas--;
@@ -175,6 +184,11 @@ int main(int argc, char* argv[]){
 		sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), r.p, r.g, r.t, tip_str);
 		write(filedes, bf,LINE);
 		
+		if (r.g == 'M')
+			nRecebidos[0] += 1;
+		else
+			nRecebidos[1] += 1;
+		
 		l++;
 		if (l == aux){
 		   close(fd_entrada);
@@ -248,6 +262,11 @@ int main(int argc, char* argv[]){
 				sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), requests[0].p, requests[0].g, requests[0].t, tip_str);
 				write(filedes, bf,LINE);
 				
+				if (requests[0].g == 'M')
+					nRejeitados[0] += 1;
+				else
+					nRejeitados[1] += 1;
+				
 				//adjusts the queue
 				for (i = 0; i < n_pedidos; i++)
 					*(requests+i) = *(requests+i+1);
@@ -308,6 +327,10 @@ int main(int argc, char* argv[]){
 		if (value == 0) //thread in execution		
 			pthread_join(threads[v],NULL);		
 	}
+	
+	printf("Número de pedidos recebidos: %d (%dM + %dF)\n", nRecebidos[0]+nRecebidos[1] , nRecebidos[0], nRecebidos[1]);
+	printf("Número de pedidos rejeitados: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
+	printf("Número de pedidos servidos: %d (%dM + %dF)\n", nServidos[0]+nServidos[1] , nServidos[0], nServidos[1]);
 	
 	puts("All requests were served. Thank you and come again!\n");
 	//Close and delete fifos

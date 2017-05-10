@@ -30,6 +30,10 @@ int max_utilizacao;
 clock_t start,end;
 struct tms t;
 
+int nPedidos[2] = {0,0};
+int nRejeitados[2] = {0,0};
+int nDescartados[2] = {0,0};
+
 struct Request {
 	int p; //id number 
 	char g; //user gender('F' or 'M')
@@ -83,6 +87,12 @@ void * generator_func(void * arg)
 		printf("id: %d, genero: %c, duracao: %d, tip: %d, rej: %d\n", request.p, request.g, request.t,request.tip, request.rej);
 		sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), request.p, request.g, request.t, tip_str);
 		write(filedes, bf,LINE);
+		
+		if (request.g == 'M')
+			nPedidos[0] +=1;
+		else
+			nPedidos[1] +=1;
+		
 		n--;
 	}
 	close(fd_entrada);
@@ -122,6 +132,11 @@ void * rejected_func(void * arg)
 			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
 			write(filedes, bf,LINE); //José
 			
+			if (r.g == 'M')
+				nRejeitados[0] +=1;
+			else
+				nRejeitados[1] +=1;
+			
 			r.rej++;
 			write(fd_entrada, &r, sizeof(r));
 		}
@@ -133,6 +148,11 @@ void * rejected_func(void * arg)
 			printf("Descartado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); //José
 			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
 			write(filedes, bf,LINE); //José
+			
+			if (r.g == 'M')
+				nDescartados[0] +=1;
+			else
+				nDescartados[1] +=1;
 		} //José
 	}
 	
@@ -172,6 +192,10 @@ int main(int argc, char* argv[]){
 	pthread_t pid2;
 	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Error creating the Rejected Thread");
 	if(pthread_join(pid2,NULL)<0) perror("Error on join of the Rejected Thread");
+	
+	printf("Número de pedidos gerados: %d (%dM + %dF)\n", nPedidos[0]+nPedidos[1] , nPedidos[0], nPedidos[1]);
+	printf("Número de pedidos rejeitados: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
+	printf("Número de pedidos descatados: %d (%dM + %dF)\n", nDescartados[0]+nDescartados[1] , nDescartados[0], nDescartados[1]);
 	
 	//Close and delete fifos
 	close(fd_rejeitados);
