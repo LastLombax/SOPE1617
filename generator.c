@@ -33,6 +33,7 @@ struct tms t;
 int nPedidos[2] = {0,0};
 int nRejeitados[2] = {0,0};
 int nDescartados[2] = {0,0};
+char file[20] = "/tmp/ger.";
 
 struct Request {
 	int p; //id number 
@@ -42,20 +43,14 @@ struct Request {
 	int rej;//number of rejections
 };
 
-
-//inst e pid têm valores estranhos nos dois ficheiros
-//o pid no nome dos files é o identificador do processo que os cria, tem de ser metido
-//falta escrever a ultima informação estatística no fim:
-//nº pedidos gerados (total e por género), 
-//nº de rejeiçõesrecebidas (total e por género) e
-//nº de rejeições descartadas (total e por género).
-//escrever as mensagens de cada pedido criado no generator.c no file ger.pid
-
-
 void * generator_func(void * arg)
 {
 	int n = *(int*) arg; 
-	int filedes = open("/tmp/ger.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
+	int pid = getpid();
+	char spid[20];
+	sprintf(spid, "%d", pid);
+	strcat(file,spid);
+	int filedes = open(file, O_WRONLY | O_SYNC | O_CREAT | O_APPEND, 0660);	
 	int pinc=1;//request increment
 	
 	srand(time(NULL));
@@ -68,7 +63,6 @@ void * generator_func(void * arg)
 	
 	char bf[LINE];
 	char *tip_str="PEDIDO";
-	puts("here");
 	while(n>0){
 		
 		gen = rand()%2;
@@ -84,9 +78,10 @@ void * generator_func(void * arg)
 		end=times(&t);
 		instant=(float)(end-start)/ticks;
 		write(fd_entrada, &request, sizeof(request));
-		printf("id: %d, genero: %c, duracao: %d, tip: %d, rej: %d\n", request.p, request.g, request.t,request.tip, request.rej);
-		sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), request.p, request.g, request.t, tip_str);
-		write(filedes, bf,LINE);
+		printf("id: %d, gender: %c, duration: %d, tip: %d, rej: %d\n", request.p, request.g, request.t,request.tip, request.rej);
+		sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), request.p, request.g, request.t, tip_str);
+		
+		write(filedes, bf,strlen(bf));
 		
 		if (request.g == 'M')
 			nPedidos[0] +=1;
@@ -107,10 +102,10 @@ void * rejected_func(void * arg)
 	struct Request r;
 	
 	
-	int filedes = open("/tmp/ger.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);  //José
-	char bf[LINE]; // José
-	float instant; // José
-	long ticks =sysconf(_SC_CLK_TCK); // José
+	int filedes = open(file, O_WRONLY | O_SYNC | O_CREAT | O_APPEND, 0660);  
+	char bf[LINE]; 
+	float instant; 
+	long ticks =sysconf(_SC_CLK_TCK); 
 	
 	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
 		perror("Error on opening the fifo entrada");
@@ -125,12 +120,12 @@ void * rejected_func(void * arg)
 		
 		if(r.rej<3){
 			
-			end=times(&t); //José
-			instant=(float)(end-start)/ticks; //José
-			char *tip_str="REJEITADO"; //José
-			printf("Rejeitado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); //José
-			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
-			write(filedes, bf,LINE); //José
+			end=times(&t); 
+			instant=(float)(end-start)/ticks; 
+			char *tip_str="REJEITADO"; 
+			printf("Rejected(%d) - id: %d, gender: %c, duration: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
+			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), r.p, r.g, r.t, tip_str); 
+			write(filedes, bf,strlen(bf)); 
 			
 			if (r.g == 'M')
 				nRejeitados[0] +=1;
@@ -140,20 +135,20 @@ void * rejected_func(void * arg)
 			r.rej++;
 			write(fd_entrada, &r, sizeof(r));
 		}
-		else{ //José
-			end=times(&t); //José
-			instant=(float)(end-start)/ticks; //José
-			char *tip_str="DESCARTADO"; //José
-			r.tip = DESCARTADO; //José
-			printf("Descartado(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); //José
-			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), r.p, r.g, r.t, tip_str); //José
-			write(filedes, bf,LINE); //José
+		else{ 
+			end=times(&t); 
+			instant=(float)(end-start)/ticks; 
+			char *tip_str="DESCARTADO"; 
+			r.tip = DESCARTADO; 
+			printf("Descarted: (%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
+			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), r.p, r.g, r.t, tip_str); 
+			write(filedes, bf,strlen(bf)); 
 			
 			if (r.g == 'M')
 				nDescartados[0] +=1;
 			else
 				nDescartados[1] +=1;
-		} //José
+		} 
 	}
 	
 	return NULL;
@@ -193,9 +188,9 @@ int main(int argc, char* argv[]){
 	if(pthread_create(&pid2,NULL, rejected_func,NULL)<0) perror("Error creating the Rejected Thread");
 	if(pthread_join(pid2,NULL)<0) perror("Error on join of the Rejected Thread");
 	
-	printf("Número de pedidos gerados: %d (%dM + %dF)\n", nPedidos[0]+nPedidos[1] , nPedidos[0], nPedidos[1]);
-	printf("Número de pedidos rejeitados: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
-	printf("Número de pedidos descatados: %d (%dM + %dF)\n", nDescartados[0]+nDescartados[1] , nDescartados[0], nDescartados[1]);
+	printf("Number of generated requests:: %d (%dM + %dF)\n", nPedidos[0]+nPedidos[1] , nPedidos[0], nPedidos[1]);
+	printf("Number of rejected requests:: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
+	printf("Number of descarted requests:: %d (%dM + %dF)\n", nDescartados[0]+nDescartados[1] , nDescartados[0], nDescartados[1]);
 	
 	//Close and delete fifos
 	close(fd_rejeitados);

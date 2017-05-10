@@ -27,7 +27,7 @@
 int nRecebidos[2] = {0 , 0};
 int nRejeitados[2] = {0 , 0};
 int nServidos[2] = {0 , 0};
-
+char file[20] = "/tmp/bal.";
 
 struct Request {
 	int p; //id number 
@@ -42,17 +42,7 @@ struct aux{
 	int ind;
 };
 
-
-
-//inst e pid têm valores estranhos nos dois ficheiros
-//o pid no nome dos files é o identificador do processo que os cria, tem de ser metido
-//falta escrever a ultima informação estatística no fim:
-//nº pedidos gerados (total e por género), 
-//nº de rejeiçõesrecebidas (total e por género) e
-//nº de rejeições descartadas (total e por género).
-//escrever as mensagens de cada pedido criado no generator.c no file ger.pid
-
-
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
 int n_lugares; //semaphore array size and number of places in the sauna
 int n_pessoas=0; //number of people in sauna
@@ -83,7 +73,7 @@ void *request_func(void * arg){
 	
 	reInd.r.tip = SERVIDO;
 	
-	int filedes = open("/tmp/bal.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
+	int filedes = open(file, O_WRONLY | O_SYNC | O_CREAT | O_APPEND, 0660);
 	float instant;
 	long ticks =sysconf(_SC_CLK_TCK);
 	
@@ -91,17 +81,22 @@ void *request_func(void * arg){
 	char *tip_str="SERVIDO";
 	end=times(&t);
 	instant=(float)(end-start)/ticks;
-	sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), reInd.r.p, reInd.r.g, reInd.r.t, tip_str);
-	write(filedes, bf,LINE);
+	sleep(1);
+	sprintf(bf,"%4.2f - %6d - %lu - %3d: %c - %9d - %10s\n",instant, getpid(), pthread_self(), reInd.r.p, reInd.r.g, reInd.r.t, tip_str);
+	write(filedes, bf,strlen(bf));
 	
 	if (reInd.r.g == 'M')
 		nServidos[0] += 1;
 	else
 		nServidos[1] += 1;
-	
-	printf("There is a clear spot in the sauna\n");
+	pthread_mutex_lock(&mut);
+	printf("Request %d has been completed and ", reInd.r.p);	
+	if (reInd.r.g == 'M')
+		printf("he left the sauna!\n");
+	else
+		printf("she left the sauna!\n");
 	n_pessoas--;
-	
+	pthread_mutex_unlock(&mut);
 	sem_post(&semArray[reInd.ind]);
 	return NULL;		
 }
@@ -115,7 +110,12 @@ int main(int argc, char* argv[]){
 	action.sa_flags = 0;
 	sigaction(SIGINT,&action,NULL);	
 	
-	int filedes = open("/tmp/bal.pid", O_WRONLY | O_SYNC | O_CREAT, 0660);
+	int pid = getpid();
+	char spid[20];
+	sprintf(spid, "%d", pid);
+	strcat(file,spid);	
+	int filedes = open(file, O_WRONLY | O_SYNC | O_CREAT | O_APPEND, 0660);
+	
 	float instant;
 	long ticks =sysconf(_SC_CLK_TCK);	
 	
@@ -158,31 +158,27 @@ int main(int argc, char* argv[]){
 			 perror("Error on the initialization of the semaphore array\n");
 			 exit(5);
 		 }
-	
-	
+		
 	//one thread per spot
 	pthread_t threads[n_lugares];
-	
-	
+		
 	//gets number of requests before getting the requests	
 	puts("Waiting for Generator Data . . .\n");
 	read(fd_entrada, &n_pedidos, sizeof(int));
 	requests = malloc(n_pedidos*sizeof(*requests));	
-	
-	
+		
 	//saves requests into array
 	int aux = n_pedidos;
 	while( (size = read(fd_entrada, &r, sizeof(r))) > 0 || l != aux-1 ){		
 		r.tip = RECEBIDO;
 		requests[l] = r;
-		printf("id: %d, genero: %c, duracao: %d, tip: %d\n", r.p, r.g, r.t, r.tip);
-		
+	
 		char bf[LINE];
 		char *tip_str="PEDIDO";
 		end=times(&t);
 		instant=(float)(end-start)/ticks;
-		sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), r.p, r.g, r.t, tip_str);
-		write(filedes, bf,LINE);
+		sprintf(bf,"%4.2f - %6d - %lu - %3d: %c - %9d - %10s\n",instant, getpid(), pthread_self(), r.p, r.g, r.t, tip_str);
+		write(filedes, bf,strlen(bf));
 		
 		if (r.g == 'M')
 			nRecebidos[0] += 1;
@@ -195,20 +191,20 @@ int main(int argc, char* argv[]){
 		   break;
 		}
 	}
-	
-	
+		
 	if ((fd_entrada=open("/tmp/entrada",O_RDWR)) == -1){
 		perror("Error on opening the fifo entrada");
 		exit(3);
 	}
 	
-	printf("\nDealing with queue\n\n");
+	printf("\nDealing with queue\n");
 	sleep(2);
 
 	int hasRejected = 0,index, currSize = n_pedidos, flag = 0;
 	char gender;		
 	
 	while (1){
+		printf("\nCurrent queue status: \n");
 		for (i = 0; i < currSize; i++)					
 			printf("id: %d\n", requests[i].p);		
 		
@@ -259,8 +255,9 @@ int main(int argc, char* argv[]){
 				char *tip_str="REJEITADO";
 				end=times(&t);
 				instant=(float)(end-start)/ticks;
-				sprintf(bf,"%4.2f - %6d - %6d - %3d: %c - %9d - %10s\n",instant, (int)getpid(), pthread_self(), requests[0].p, requests[0].g, requests[0].t, tip_str);
-				write(filedes, bf,LINE);
+				
+				sprintf(bf,"%4.2f - %6d - %lu - %3d: %c - %9d - %10s\n",instant, getpid(), pthread_self(), requests[0].p, requests[0].g, requests[0].t, tip_str);
+				write(filedes, bf,strlen(bf));
 				
 				if (requests[0].g == 'M')
 					nRejeitados[0] += 1;
@@ -275,8 +272,11 @@ int main(int argc, char* argv[]){
 			}						
 			
 			//stops execution while sauna is full
-			while(n_pessoas == n_lugares) {sleep(1); printf("parado\n");} 
-		
+			if (n_pessoas == n_lugares){
+				printf("The sauna is full, please wait for an available spot\n");
+				while(n_pessoas == n_lugares) {sleep(1);} 
+			}
+			
 			sem_getvalue(&semArray[index],&valid);
 			
 			//if sauna is empty
@@ -314,8 +314,9 @@ int main(int argc, char* argv[]){
 						*(requests+i) = *(requests+i+1);
 					requests[n_pedidos-1].p = 0;					
 				break;
-			}			
+			}
 		}
+		sleep(3);
 	}
 	printf("Checking if there's anyone left in the sauna...\n");
 	
@@ -327,17 +328,22 @@ int main(int argc, char* argv[]){
 		if (value == 0) //thread in execution		
 			pthread_join(threads[v],NULL);		
 	}
-	
-	printf("Número de pedidos recebidos: %d (%dM + %dF)\n", nRecebidos[0]+nRecebidos[1] , nRecebidos[0], nRecebidos[1]);
-	printf("Número de pedidos rejeitados: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
-	printf("Número de pedidos servidos: %d (%dM + %dF)\n", nServidos[0]+nServidos[1] , nServidos[0], nServidos[1]);
-	
 	puts("All requests were served. Thank you and come again!\n");
+	
+	sleep(3);
+	printf("Here's today's statistics:\n");
+	sleep(2);
+	printf("Number of received requests: %d (%dM + %dF)\n", nRecebidos[0]+nRecebidos[1] , nRecebidos[0], nRecebidos[1]);
+	printf("Number of rejected requests: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
+	printf("Number of served requests: %d (%dM + %dF)\n", nServidos[0]+nServidos[1] , nServidos[0], nServidos[1]);
+	
+	
 	//Close and delete fifos
 	close(fd_entrada);
 	close(fd_rejeitados);
 	unlink("/tmp/entrada");
 	unlink("/tmp/rejeitados");
+	pthread_mutex_destroy(&mut);
 	
 	return 0;
 }
