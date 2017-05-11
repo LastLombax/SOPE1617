@@ -140,7 +140,7 @@ void * rejected_func(void * arg)
 			instant=(float)(end-start)/ticks; 
 			char *tip_str="DESCARTADO"; 
 			r.tip = DESCARTADO; 
-			printf("Descarted: (%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
+			printf("Descarted(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
 			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), r.p, r.g, r.t, tip_str); 
 			write(filedes, bf,strlen(bf)); 
 			
@@ -192,6 +192,7 @@ int main(int argc, char* argv[]){
 	printf("Number of rejected requests:: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
 	printf("Number of descarted requests:: %d (%dM + %dF)\n", nDescartados[0]+nDescartados[1] , nDescartados[0], nDescartados[1]);
 	
+	printf("\nAll the information regarding the requests is in %s\n", file);
 	//Close and delete fifos
 	close(fd_rejeitados);
 	unlink("/tmp/rejeitados");

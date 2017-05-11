@@ -24,10 +24,6 @@
 
 #define LINE 100
 
-int nRecebidos[2] = {0 , 0};
-int nRejeitados[2] = {0 , 0};
-int nServidos[2] = {0 , 0};
-char file[20] = "/tmp/bal.";
 
 struct Request {
 	int p; //id number 
@@ -47,12 +43,18 @@ pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 int n_lugares; //semaphore array size and number of places in the sauna
 int n_pessoas=0; //number of people in sauna
 struct Request* requests; //request queue
+struct Request* descarted; //for the descarted requests
 sem_t* semArray;//semaphore array where each place of the sauna is controlled by a semaphore
 int n_pedidos; //number of requests sent by generator
 //to control instants for the register messages
 clock_t start,end;
 struct tms t;
 int fd_entrada, fd_rejeitados; //file descriptors
+
+int nRecebidos[2] = {0 , 0};
+int nRejeitados[2] = {0 , 0};
+int nServidos[2] = {0 , 0};
+char file[20] = "/tmp/bal.";
 
 
 void sighandler(int signalno){
@@ -166,7 +168,7 @@ int main(int argc, char* argv[]){
 	puts("Waiting for Generator Data . . .\n");
 	read(fd_entrada, &n_pedidos, sizeof(int));
 	requests = malloc(n_pedidos*sizeof(*requests));	
-		
+	descarted = malloc(n_pedidos*sizeof(*descarted));
 	//saves requests into array
 	int aux = n_pedidos;
 	while( (size = read(fd_entrada, &r, sizeof(r))) > 0 || l != aux-1 ){		
@@ -211,12 +213,20 @@ int main(int argc, char* argv[]){
 		for(i = 0; i < currSize; i++)
             if(requests[i].rej == 3)
                	flag++;   		
+			
 
 		//the loop breaks here
 		if(flag == currSize) {
 			printf("All the remaining requests will be rejected\n");
+			for (i = 0; i < currSize; i++){	
+				if (requests[i].g == 'M')
+					nRejeitados[0] += 1;
+				else
+					nRejeitados[1] += 1;
+				write(fd_rejeitados,&requests[i],sizeof(r));
+			}				 
 			r.p = -1;
-			write(fd_rejeitados, &r, sizeof(r)); //write to fifo rejeitados
+			write(fd_rejeitados, &r, sizeof(r)); //write to fifo rejeitados to end 
 			break;
 		}
 	
@@ -337,7 +347,8 @@ int main(int argc, char* argv[]){
 	printf("Number of rejected requests: %d (%dM + %dF)\n", nRejeitados[0]+nRejeitados[1] , nRejeitados[0], nRejeitados[1]);
 	printf("Number of served requests: %d (%dM + %dF)\n", nServidos[0]+nServidos[1] , nServidos[0], nServidos[1]);
 	
-	
+	printf("\nAll the information regarding the requests is in %s\n", file);
+
 	//Close and delete fifos
 	close(fd_entrada);
 	close(fd_rejeitados);
