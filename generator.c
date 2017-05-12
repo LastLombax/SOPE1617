@@ -123,7 +123,8 @@ void * rejected_func(void * arg)
 			end=times(&t); 
 			instant=(float)(end-start)/ticks; 
 			char *tip_str="REJEITADO"; 
-			printf("Rejected(%d) - id: %d, gender: %c, duration: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
+			r.rej++;
+			printf("Rejected - id: %d, gender: %c, duration: %d, tip: %d, number of rejections:%d\n", r.p, r.g, r.t,r.tip, r.rej); 
 			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), r.p, r.g, r.t, tip_str); 
 			write(filedes, bf,strlen(bf)); 
 			
@@ -132,7 +133,7 @@ void * rejected_func(void * arg)
 			else
 				nRejeitados[1] +=1;
 			
-			r.rej++;
+			
 			write(fd_entrada, &r, sizeof(r));
 		}
 		else{ 
@@ -140,7 +141,7 @@ void * rejected_func(void * arg)
 			instant=(float)(end-start)/ticks; 
 			char *tip_str="DESCARTADO"; 
 			r.tip = DESCARTADO; 
-			printf("Descarted(%d) - id: %d, genero: %c, duracao: %d, tip: %d\n", r.rej, r.p, r.g, r.t,r.tip); 
+			printf("Descarted - id: %d, genero: %c, duracao: %d, tip: %d, number of rejections:%d\n", r.p, r.g, r.t,r.tip, r.rej); 
 			sprintf(bf,"%4.2f - %6d - %3d: %c - %9d - %10s\n",instant, getpid(), r.p, r.g, r.t, tip_str); 
 			write(filedes, bf,strlen(bf)); 
 			

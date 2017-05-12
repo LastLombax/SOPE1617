@@ -326,7 +326,7 @@ int main(int argc, char* argv[]){
 				break;
 			}
 		}
-		sleep(3);
+		sleep(5);
 	}
 	printf("Checking if there's anyone left in the sauna...\n");
 	
