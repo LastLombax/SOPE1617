@@ -205,10 +205,14 @@ int main(int argc, char* argv[]){
 	int hasRejected = 0,index, currSize = n_pedidos, flag = 0;
 	char gender;		
 	
+	//initial queue
+	printf("Initial queue: \n");
+	for (i = 0; i < currSize; i++)					
+		printf("id: %d\n", requests[i].p);	
+	sleep(4);
+	
 	while (1){
-		printf("\nCurrent queue status: \n");
-		for (i = 0; i < currSize; i++)					
-			printf("id: %d\n", requests[i].p);		
+		
 		
 		for(i = 0; i < currSize; i++)
             if(requests[i].rej == 3)
@@ -326,6 +330,9 @@ int main(int argc, char* argv[]){
 				break;
 			}
 		}
+		printf("\nCurrent queue status: \n");
+		for (i = 0; i < currSize; i++)					
+			printf("id: %d\n", requests[i].p);		
 		sleep(5);
 	}
 	printf("Checking if there's anyone left in the sauna...\n");
