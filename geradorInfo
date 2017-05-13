@@ -1,0 +1,8 @@
+
+Informação acerca do programa generator
+
+Invocação: ./generator <n. pedidos> <max. utilização>
+
+Saída: O programa imprime todos os pedidos criados aquando do início deste, imprime os pedidos rejeitados e, no fim, imprime os pedidos rejeitados. No fim, indica uma estatístca geral e o nome do ficheiro que contém várias informações.
+
+Registos: No ficheiro ger.pid, onde pid é o ID do processo, estão indicadas várias informações relativas à execução do programa, no formato: inst – pid – tid – p: g – dur – tip, para cada pedido, seja este criado, rejeitado ou descartado.

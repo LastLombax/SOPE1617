@@ -1,0 +1,8 @@
+
+Informação acerca do programa sauna
+
+Invocação: ./sauna <n. lugares> 
+
+Saída: O programa imprime, inicialmente, a fila inicial e, após cada mudança, como entrada na sauna ou rejeição, volta a imprimir a dita fila. Imprime se alguém saiu da sauna, se esta está vazia, se contém alguém ou se esta está cheia(o que pára o processo até existir um lugar livre). No fim, indica uma estatística geral e o nome do ficheiro que contém várias informações.
+
+Registos: No ficheiro bal.pid, onde pid é o ID do processo, estão indicadas várias informações relativas à execução do programa, no formato: inst – pid – tid – p: g – dur – tip, para cada pedido, seja este recebido, rejeitado ou servido.
