@@ -117,6 +117,10 @@ void * rejected_func(void * arg)
 			printf("No more rejected requests\n");
 			return NULL;
 		} 
+		else if (r.p == -2){ //ending abruptally
+			printf("Sauna ended abruptally, shutting down...\n");
+			exit(0);
+		}
 		
 		if(r.rej<3){
 			

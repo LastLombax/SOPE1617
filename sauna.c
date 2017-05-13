@@ -61,6 +61,9 @@ void sighandler(int signalno){
 	if (signalno == SIGINT)
 	{
 		printf("Program ended abruptally, shutting down...\n");
+		struct Request r;
+		r.p = -2;
+		write(fd_rejeitados, &r, sizeof(r)); //write to fifo rejeitados to end 
 		close(fd_entrada);
 		close(fd_rejeitados);
 		unlink("/tmp/entrada");
@@ -176,7 +179,7 @@ int main(int argc, char* argv[]){
 		requests[l] = r;
 	
 		char bf[LINE];
-		char *tip_str="PEDIDO";
+		char *tip_str="RECEBIDO";
 		end=times(&t);
 		instant=(float)(end-start)/ticks;
 		sprintf(bf,"%4.2f - %6d - %lu - %3d: %c - %9d - %10s\n",instant, getpid(), pthread_self(), r.p, r.g, r.t, tip_str);
@@ -210,18 +213,15 @@ int main(int argc, char* argv[]){
 	for (i = 0; i < currSize; i++)					
 		printf("id: %d\n", requests[i].p);	
 	sleep(4);
-	
-	while (1){
-		
-		
+	system("clear");
+	while (1){		
 		for(i = 0; i < currSize; i++)
             if(requests[i].rej == 3)
-               	flag++;   		
-			
+               	flag++;   					
 
 		//the loop breaks here
 		if(flag == currSize) {
-			printf("All the remaining requests will be rejected\n");
+			printf("\nAll the remaining requests will be rejected\n");
 			for (i = 0; i < currSize; i++){	
 				if (requests[i].g == 'M')
 					nRejeitados[0] += 1;
@@ -249,7 +249,7 @@ int main(int argc, char* argv[]){
 				continue;
 			else{
 				//finds the element in the queue after the last member
-				printf("Inserting rejected on the end of the queue\n");
+				printf("\nInserting rejected request %d at the end of the queue\n", r.p);
 				requests[currSize] = r;
 				currSize++;
 				}
@@ -259,7 +259,7 @@ int main(int argc, char* argv[]){
 			
 			//rejects request
 			if (n_pessoas > 0 && requests[0].g != gender){
-				printf("Request rejected \n");
+				printf("\nRequest %d was rejected\n", requests[0].p);
 				requests[0].tip = REJEITADO;	
 				hasRejected=1;
 				currSize--;
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]){
 			
 			//stops execution while sauna is full
 			if (n_pessoas == n_lugares){
-				printf("The sauna is full, please wait for an available spot\n");
+				printf("\nThe sauna is full, please wait for an available spot\n");
 				while(n_pessoas == n_lugares) {sleep(1);} 
 			}
 			
@@ -295,7 +295,7 @@ int main(int argc, char* argv[]){
 			
 			//if sauna is empty
 			if (n_pessoas == 0){	
-					printf("Empty sauna: you can come in\n");
+					printf("\nEmpty sauna: you can come in, Request %d\n",requests[0].p);
 					struct aux reInd;
 					reInd.r = requests[0];
 					reInd.ind = index;
@@ -314,7 +314,7 @@ int main(int argc, char* argv[]){
 			
 			//there's someone in the sauna	
 			else if (requests[0].g == gender && valid == 1){
-					printf("You can enter\n");
+					printf("\nRequest %d can enter\n", requests[0].p);
 					struct aux reInd;
 					reInd.r = requests[0];
 					reInd.ind = index;
@@ -330,10 +330,11 @@ int main(int argc, char* argv[]){
 				break;
 			}
 		}
-		printf("\nCurrent queue status: \n");
+		printf("Current queue status: \n");
 		for (i = 0; i < currSize; i++)					
 			printf("id: %d\n", requests[i].p);		
 		sleep(5);
+		system("clear");
 	}
 	printf("Checking if there's anyone left in the sauna...\n");
 	

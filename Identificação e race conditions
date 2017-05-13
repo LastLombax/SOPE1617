@@ -6,5 +6,5 @@ up201503447 - Vitor Emanuel Fernandes Magalhães
 
 Durante o desenvolvimento do programa sauna.c, fomos deparados com algumas situações de competição no que toca a acesso a elementos partilhados como os lugares na sauna e o número de pessoas dentro da sauna.
 Para resolver o acesso aos lugares, foi criado um array de semáforos, de modo a impedir acesso a um lugar que já estivesse ocupado. 
-O número de pessoas que estão na sauna diminui no fim de cada thread criada para um certo pedido. Para resolver isto foi criado um mutex, que bloqueia antes da decrementação do número de pessoas, e desbloqueia após a dita decrementação.
+O número de pessoas que estão na sauna diminui no fim de cada thread criada para um certo pedido. Para resolver possíveis race conditions, foi criado um mutex que bloqueia antes da decrementação do número de pessoas e desbloqueia após a dita decrementação.
 
