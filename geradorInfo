@@ -3,7 +3,7 @@ Informação acerca de uma instância do programa generator
 
 Invocação: ./generator <n. pedidos> <max. utilização>
 
-Saída: O programa imprime todos os pedidos criados aquando do início deste. À medida que recebe pedidos rejeitos, imprime-os e, no fim, imprime os pedidos descartados. No fim, indica uma estatístca geral e o nome do ficheiro que contém várias informações.
+Saída: O programa imprime todos os pedidos criados aquando do início deste. À medida que recebe pedidos rejeitados, imprime-os e, no fim, imprime os pedidos descartados. No fim, indica uma estatístca geral e o nome do ficheiro que contém várias informações.
 Foi também implementado um handler do sinal SIGINT. Este sinal será detetado pelo programa sauna e terminará o generator também.
 
 Registos: No ficheiro ger.pid, onde pid é o ID do processo, estão indicadas várias informações relativas à execução do programa, no formato: inst – pid – tid – p: g – dur – tip, para cada pedido, seja este criado, rejeitado ou descartado.
