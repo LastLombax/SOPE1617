@@ -27,11 +27,6 @@ In the end, some statistics are presented.
 
 In the file _bal.pid_, where pid is the process ID, there are several information regarding the program's execution. Each line is in the format, inst – pid – tid – p: g – dur – tip, for each request.
 
-
-Durante o desenvolvimento do programa sauna.c, fomos deparados com algumas situações de competição no que toca a acesso a elementos partilhados como os lugares na sauna e o número de pessoas dentro da sauna.
-Para resolver o acesso aos lugares, foi criado um array de semáforos, de modo a impedir acesso a um lugar que já estivesse ocupado. 
-O número de pessoas que estão na sauna diminui no fim de cada thread criada para um certo pedido. Para resolver possíveis race conditions, foi criado um mutex que bloqueia antes da decrementação do número de pessoas e desbloqueia após a dita decrementação.
-
 ## Race Conditions
 
 During the development of the _sauna.c_ file, there was some competition regarding access to the shared elements, like sauna seats and number of people inside the sauna.
